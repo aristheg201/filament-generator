@@ -3,15 +3,17 @@ import { blockDefinitionSchema, equipmentDefinitionSchema, itemDefinitionSchema,
 import { loadFileSource } from '../fs/source-loader.js';
 import type { ParsedBlock, ParsedEquipment, ParsedItem, ParsedModel, ParsedPack, ParsedFile } from '../types.js';
 import { classifyFile } from './classify.js';
+import { canonicalizeExternalAssetFiles, importExternalPack } from './external-pack.js';
 import { parseJsonFile } from './json.js';
 import { detectNamespaces } from './namespace.js';
 import { diagnostic } from '../validate/diagnostics.js';
 
 export async function parsePack(inputPath: string): Promise<ParsedPack> {
   const source = await loadFileSource(inputPath);
-  const files = await source.listFiles();
+  const sourceFiles = await source.listFiles();
+  const files = canonicalizeExternalAssetFiles(sourceFiles);
   const classified = files.map((file) => classifyFile(file));
-  const namespaces = detectNamespaces(classified);
+  const namespaces = new Set(detectNamespaces(classified));
 
   const parseDiagnostics: Diagnostic[] = [];
   const parsedFiles: ParsedFile[] = [];
@@ -139,10 +141,33 @@ export async function parsePack(inputPath: string): Promise<ParsedPack> {
     parsedFiles.push({ ...file, hasBom: false });
   }
 
+  const external = importExternalPack(sourceFiles);
+  for (const entry of external.items) {
+    items.push(entry);
+    namespaces.add(entry.namespace);
+  }
+  for (const entry of external.decorations) {
+    decorations.push(entry);
+    namespaces.add(entry.namespace);
+  }
+  for (const entry of external.blocks) {
+    blocks.push(entry);
+    namespaces.add(entry.namespace);
+  }
+  for (const entry of external.equipments) {
+    equipments.push(entry);
+    namespaces.add(entry.namespace);
+  }
+  for (const entry of external.models) {
+    models.push(entry);
+    namespaces.add(entry.namespace);
+  }
+  parseDiagnostics.push(...external.parseDiagnostics);
+
   return {
     inputPath,
     files: parsedFiles,
-    namespaces,
+    namespaces: [...namespaces].sort((a, b) => a.localeCompare(b)),
     items,
     decorations,
     blocks,

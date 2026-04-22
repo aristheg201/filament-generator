@@ -15,7 +15,7 @@ export function runtimeCheckPack(pack: ParsedPack): RuntimeCheckResult {
   const runtimeDiagnostics: Diagnostic[] = [];
 
   for (const item of pack.items) {
-    const isArmorType = item.definition.kind === 'armor' || item.definition.kind === 'helmet' || item.definition.kind === 'hat';
+    const isArmorType = item.definition.kind === 'armor' || item.definition.kind === 'helmet';
     const linkedAssetId = item.definition.assetId ?? item.definition.wearable?.equippableAssetId;
     if (isArmorType && item.definition.model && !linkedAssetId) {
       runtimeDiagnostics.push(

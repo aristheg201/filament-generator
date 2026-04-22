@@ -40,7 +40,7 @@ function validateBackingItems(pack: ParsedPack, diagnostics: Diagnostic[]): void
       continue;
     }
 
-    const isArmorType = item.definition.kind === 'armor' || item.definition.kind === 'helmet' || item.definition.kind === 'hat';
+    const isArmorType = item.definition.kind === 'armor' || item.definition.kind === 'helmet';
 
     if (isArmorType && isSuspiciousArmorBacking(item.definition.backingItem)) {
       diagnostics.push(
@@ -204,7 +204,7 @@ function validateArmorEquipment(pack: ParsedPack, diagnostics: Diagnostic[]): vo
   const assetUsage = new Map<string, number>();
 
   for (const item of pack.items) {
-    const isArmorType = item.definition.kind === 'armor' || item.definition.kind === 'helmet' || item.definition.kind === 'hat';
+    const isArmorType = item.definition.kind === 'armor' || item.definition.kind === 'helmet';
     const linkedAssetId = item.definition.assetId ?? item.definition.wearable?.equippableAssetId;
     const hasInventoryModel = Boolean(item.definition.model);
 
@@ -422,7 +422,7 @@ function validateNamespaceMismatches(pack: ParsedPack, diagnostics: Diagnostic[]
 }
 
 function isBuiltinModelReference(id: string): boolean {
-  return id.startsWith('minecraft:item/') || id.startsWith('item/');
+  return id.startsWith('minecraft:item/') || id.startsWith('item/') || id.startsWith('builtin/');
 }
 
 export function summarizeDiagnostics(diagnostics: Diagnostic[]): { errors: number; warnings: number; infos: number } {

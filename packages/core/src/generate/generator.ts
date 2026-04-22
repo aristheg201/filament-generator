@@ -73,7 +73,12 @@ export async function generatePack(inputPath: string, outputPath: string, option
   }
 
   for (const file of pack.files) {
-    if (file.role === 'texture' || file.role === 'unknown') {
+    if (file.role === 'texture') {
+      filesToWrite.set(file.path, stripUtf8Bom(file.content));
+      continue;
+    }
+
+    if (file.role === 'unknown' && !/\.ya?ml$/i.test(file.path)) {
       filesToWrite.set(file.path, stripUtf8Bom(file.content));
     }
   }
