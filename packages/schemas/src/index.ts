@@ -78,10 +78,19 @@ export const equipmentDefinitionSchema = z.object({
 });
 export type EquipmentDefinition = z.infer<typeof equipmentDefinitionSchema>;
 
-export const modelReferenceSchema = z.object({
+export const modelOverrideSchema = z.object({
+  model: z.string().optional(),
+  predicate: z.record(z.string(), z.number()).default({}),
+});
+export type ModelOverride = z.infer<typeof modelOverrideSchema>;
+
+export const modelReferenceSchema = z
+  .object({
   parent: z.string().optional(),
   textures: z.record(z.string(), z.string()).default({}),
-});
+  overrides: z.array(modelOverrideSchema).default([]),
+  })
+  .passthrough();
 export type ModelReference = z.infer<typeof modelReferenceSchema>;
 
 export const buildReportSchema = z.object({

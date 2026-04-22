@@ -20,6 +20,37 @@ export function modelIdToPath(id: string): string {
   return `assets/${namespace}/models/${modelPath}.json`;
 }
 
+export function normalizeModelReferenceId(reference: string, fallbackNamespace = 'minecraft'): string {
+  const normalized = normalizeSlashes(reference).replace(/\.json$/i, '');
+  const separatorIndex = normalized.indexOf(':');
+
+  let namespace = fallbackNamespace;
+  let modelPath = normalized;
+
+  if (separatorIndex >= 0) {
+    namespace = normalized.slice(0, separatorIndex);
+    modelPath = normalized.slice(separatorIndex + 1);
+  }
+
+  if (modelPath.startsWith('item/')) {
+    modelPath = modelPath.slice('item/'.length);
+  }
+
+  return `${namespace}:${modelPath}`;
+}
+
+export function isBuiltinParentReference(id: string): boolean {
+  return (
+    id.startsWith('builtin/') ||
+    id === 'item/generated' ||
+    id === 'item/handheld' ||
+    id === 'item/handheld_rod' ||
+    id === 'minecraft:item/generated' ||
+    id === 'minecraft:item/handheld' ||
+    id === 'minecraft:item/handheld_rod'
+  );
+}
+
 export function textureIdToPath(id: string): string {
   const normalized = normalizeSlashes(id);
   const parts = normalized.split(':');

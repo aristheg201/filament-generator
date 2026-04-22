@@ -190,6 +190,7 @@ function createGeneratedModel(namespace: string, itemKey: string, textureId: str
     textures: {
       layer0: textureId,
     },
+    overrides: [],
   };
 
   return {

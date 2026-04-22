@@ -1,7 +1,7 @@
 import type { Diagnostic } from '@filament-workbench/schemas';
 import type { AssetGraph, AssetNode, ParsedPack } from '../types.js';
 import { addEdge, pushMapList } from '../utils/collections.js';
-import { textureIdToPath } from '../utils/path.js';
+import { isBuiltinParentReference, normalizeModelReferenceId, textureIdToPath } from '../utils/path.js';
 
 export function buildAssetGraph(pack: ParsedPack): AssetGraph {
   const nodes = new Map<string, AssetNode>();
@@ -13,6 +13,10 @@ export function buildAssetGraph(pack: ParsedPack): AssetGraph {
   for (const item of pack.items) {
     const id = `item:${item.definition.id}`;
     nodes.set(id, { id, type: 'item', filePath: item.filePath });
+
+    const backingModelNodeId = `model:${normalizeModelReferenceId(item.definition.backingItem, item.namespace)}`;
+    addEdge(edges, id, backingModelNodeId);
+    addEdge(reverseEdges, backingModelNodeId, id);
 
     if (item.definition.model) {
       const modelNodeId = `model:${item.definition.model}`;
@@ -68,10 +72,19 @@ export function buildAssetGraph(pack: ParsedPack): AssetGraph {
     const id = `model:${model.id}`;
     nodes.set(id, { id, type: 'model', filePath: model.filePath });
 
-    if (model.definition.parent) {
-      const parentModelId = `model:${model.definition.parent}`;
+    if (model.definition.parent && !isBuiltinParentReference(model.definition.parent)) {
+      const parentModelId = `model:${normalizeModelReferenceId(model.definition.parent, model.namespace)}`;
       addEdge(edges, id, parentModelId);
       addEdge(reverseEdges, parentModelId, id);
+    }
+
+    for (const override of model.definition.overrides ?? []) {
+      if (!override.model || override.model.startsWith('builtin/')) {
+        continue;
+      }
+      const overrideModelId = `model:${normalizeModelReferenceId(override.model, model.namespace)}`;
+      addEdge(edges, id, overrideModelId);
+      addEdge(reverseEdges, overrideModelId, id);
     }
 
     for (const textureRef of Object.values(model.definition.textures)) {

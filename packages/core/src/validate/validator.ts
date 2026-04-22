@@ -1,7 +1,7 @@
 import type { Diagnostic } from '@filament-workbench/schemas';
 import type { ParsedPack, ValidateResult } from '../types.js';
 import { buildAssetGraph } from '../graph/build-graph.js';
-import { textureIdToPath } from '../utils/path.js';
+import { isBuiltinParentReference, normalizeModelReferenceId, textureIdToPath } from '../utils/path.js';
 import { diagnostic } from './diagnostics.js';
 import {
   isSuspiciousArmorBacking,
@@ -142,12 +142,39 @@ function validateModelAndTextures(pack: ParsedPack, diagnostics: Diagnostic[]): 
   }
 
   for (const [modelId, model] of modelsById.entries()) {
-    if (model.parent && !isBuiltinModelReference(model.parent) && !modelsById.has(model.parent)) {
+    if (model.parent && !isBuiltinParentReference(model.parent) && !modelsById.has(normalizeModelReferenceId(model.parent))) {
       diagnostics.push(
         diagnostic('error', 'model', 'BROKEN_PARENT_CHAIN', `Missing parent model '${model.parent}'`, model.filePath, {
           relatedNodes: [modelId],
         }),
       );
+    }
+
+    const parsedModel = pack.models.find((entry) => entry.id === modelId);
+    if (parsedModel) {
+      for (const override of parsedModel.definition.overrides ?? []) {
+        if (!override.model || override.model.startsWith('builtin/')) {
+          continue;
+        }
+
+        const normalizedOverrideModelId = normalizeModelReferenceId(override.model, parsedModel.namespace);
+        if (parsedModel.namespace === 'minecraft' && override.model.startsWith('item/') && !modelsById.has(normalizedOverrideModelId)) {
+          continue;
+        }
+
+        if (!modelsById.has(normalizedOverrideModelId)) {
+          diagnostics.push(
+            diagnostic(
+              'error',
+              'model',
+              'BROKEN_OVERRIDE_CHAIN',
+              `Missing override model '${override.model}'`,
+              parsedModel.filePath,
+              { relatedNodes: [modelId] },
+            ),
+          );
+        }
+      }
     }
 
     for (const texture of model.textures) {
@@ -187,14 +214,14 @@ function hasParentCycle(
   let current: string | undefined = start;
   while (current) {
     const model = modelsById.get(current);
-    if (!model?.parent || isBuiltinModelReference(model.parent)) {
+    if (!model?.parent || isBuiltinParentReference(model.parent)) {
       return false;
     }
     if (seen.has(current)) {
       return true;
     }
     seen.add(current);
-    current = model.parent;
+    current = normalizeModelReferenceId(model.parent);
   }
   return false;
 }
