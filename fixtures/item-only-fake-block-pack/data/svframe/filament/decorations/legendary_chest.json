@@ -1,0 +1,7 @@
+{
+  "id": "svframe:legendary_chest",
+  "kind": "decoration",
+  "backingItem": "minecraft:chest",
+  "model": "svframe:legendary_chest",
+  "placeable": false
+}

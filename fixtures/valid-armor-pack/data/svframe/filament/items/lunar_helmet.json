@@ -1,0 +1,11 @@
+{
+  "id": "svframe:lunar_helmet",
+  "kind": "helmet",
+  "backingItem": "minecraft:leather_helmet",
+  "model": "svframe:lunar_helmet",
+  "assetId": "svframe:lunarset",
+  "wearable": {
+    "slot": "head",
+    "equippableAssetId": "svframe:lunarset"
+  }
+}

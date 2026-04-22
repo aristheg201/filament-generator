@@ -1,0 +1,13 @@
+﻿{
+  "assetId": "svframe:bomset",
+  "humanoid": [
+    {
+      "texture": "svframe:entity/equipment/humanoid/bomset"
+    }
+  ],
+  "humanoidLeggings": [
+    {
+      "texture": "svframe:entity/equipment/humanoid/bomset"
+    }
+  ]
+}

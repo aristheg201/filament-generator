@@ -1,0 +1,6 @@
+{
+  "id": "svframe:ghost_blade",
+  "kind": "item",
+  "backingItem": "minecraft:iron_sword",
+  "model": "svframe:ghost_blade"
+}

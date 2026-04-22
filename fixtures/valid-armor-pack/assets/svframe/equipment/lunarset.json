@@ -1,0 +1,13 @@
+{
+  "assetId": "svframe:lunarset",
+  "humanoid": [
+    {
+      "texture": "svframe:entity/equipment/humanoid/lunarset"
+    }
+  ],
+  "humanoidLeggings": [
+    {
+      "texture": "svframe:entity/equipment/humanoid/lunarset"
+    }
+  ]
+}

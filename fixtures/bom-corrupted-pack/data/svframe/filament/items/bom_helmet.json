@@ -1,0 +1,11 @@
+﻿{
+  "id": "svframe:bom_helmet",
+  "kind": "helmet",
+  "backingItem": "minecraft:leather_helmet",
+  "model": "svframe:bom_helmet",
+  "assetId": "svframe:bomset",
+  "wearable": {
+    "slot": "head",
+    "equippableAssetId": "svframe:bomset"
+  }
+}

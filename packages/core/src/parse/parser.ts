@@ -1,0 +1,157 @@
+import type { Diagnostic, EquipmentDefinition, ItemDefinition, ModelReference } from '@filament-workbench/schemas';
+import { equipmentDefinitionSchema, itemDefinitionSchema, modelReferenceSchema } from '@filament-workbench/schemas';
+import { loadFileSource } from '../fs/source-loader.js';
+import type { ParsedEquipment, ParsedItem, ParsedModel, ParsedPack, ParsedFile } from '../types.js';
+import { classifyFile } from './classify.js';
+import { parseJsonFile } from './json.js';
+import { detectNamespaces } from './namespace.js';
+import { diagnostic } from '../validate/diagnostics.js';
+
+export async function parsePack(inputPath: string): Promise<ParsedPack> {
+  const source = await loadFileSource(inputPath);
+  const files = await source.listFiles();
+  const classified = files.map((file) => classifyFile(file));
+  const namespaces = detectNamespaces(classified);
+
+  const parseDiagnostics: Diagnostic[] = [];
+  const parsedFiles: ParsedFile[] = [];
+  const items: ParsedItem[] = [];
+  const decorations: ParsedItem[] = [];
+  const equipments: ParsedEquipment[] = [];
+  const models: ParsedModel[] = [];
+  const texturePaths = new Set<string>();
+
+  for (const file of classified) {
+    if (file.role === 'texture') {
+      texturePaths.add(file.path);
+      parsedFiles.push({ ...file, hasBom: false });
+      continue;
+    }
+
+    if (file.path.endsWith('.json')) {
+      const parsed = parseJsonFile(file);
+      parsedFiles.push(parsed);
+
+      if (parsed.hasBom) {
+        parseDiagnostics.push(
+          diagnostic('error', 'json', 'JSON_BOM', `UTF-8 BOM detected in ${parsed.path}`, parsed.path, {
+            suggestedFix: 'Run fix command to strip BOM',
+          }),
+        );
+      }
+
+      if (parsed.parseError) {
+        parseDiagnostics.push(
+          diagnostic('error', 'json', 'JSON_INVALID', `Invalid JSON in ${parsed.path}: ${parsed.parseError}`, parsed.path),
+        );
+        continue;
+      }
+
+      if (parsed.role === 'filament-item' || parsed.role === 'filament-decoration') {
+        const result = itemDefinitionSchema.safeParse(parsed.jsonValue);
+        if (!result.success) {
+          parseDiagnostics.push(
+            diagnostic(
+              'error',
+              'schema',
+              'ITEM_SCHEMA_INVALID',
+              `Invalid item definition in ${parsed.path}: ${result.error.issues[0]?.message ?? 'unknown'}`,
+              parsed.path,
+            ),
+          );
+          continue;
+        }
+
+        pushItem(parsed.role, result.data, parsed.path, parsed.namespace, items, decorations);
+      }
+
+      if (parsed.role === 'equipment') {
+        const result = equipmentDefinitionSchema.safeParse(parsed.jsonValue);
+        if (!result.success) {
+          parseDiagnostics.push(
+            diagnostic(
+              'error',
+              'schema',
+              'EQUIPMENT_SCHEMA_INVALID',
+              `Invalid equipment definition in ${parsed.path}: ${result.error.issues[0]?.message ?? 'unknown'}`,
+              parsed.path,
+            ),
+          );
+          continue;
+        }
+        equipments.push({
+          definition: result.data,
+          filePath: parsed.path,
+          namespace: parsed.namespace ?? 'minecraft',
+        });
+      }
+
+      if (parsed.role === 'model') {
+        const result = modelReferenceSchema.safeParse(parsed.jsonValue);
+        if (!result.success) {
+          parseDiagnostics.push(
+            diagnostic(
+              'error',
+              'schema',
+              'MODEL_SCHEMA_INVALID',
+              `Invalid model definition in ${parsed.path}: ${result.error.issues[0]?.message ?? 'unknown'}`,
+              parsed.path,
+            ),
+          );
+          continue;
+        }
+
+        const id = toModelId(parsed.namespace ?? 'minecraft', parsed.logicalPath ?? 'unknown');
+        models.push({
+          id,
+          definition: result.data,
+          filePath: parsed.path,
+          namespace: parsed.namespace ?? 'minecraft',
+        });
+      }
+      continue;
+    }
+
+    parsedFiles.push({ ...file, hasBom: false });
+  }
+
+  return {
+    inputPath,
+    files: parsedFiles,
+    namespaces,
+    items,
+    decorations,
+    equipments,
+    models,
+    texturePaths,
+    parseDiagnostics,
+  };
+}
+
+function toModelId(namespace: string, logicalPath: string): string {
+  const clean = logicalPath.replace(/^item\//, '').replace(/\.json$/, '');
+  return `${namespace}:${clean}`;
+}
+
+function pushItem(
+  role: 'filament-item' | 'filament-decoration',
+  definition: ItemDefinition,
+  filePath: string,
+  namespace: string | undefined,
+  items: ParsedItem[],
+  decorations: ParsedItem[],
+): void {
+  const entry: ParsedItem = {
+    definition,
+    filePath,
+    namespace: namespace ?? 'minecraft',
+  };
+
+  if (role === 'filament-item') {
+    items.push(entry);
+    return;
+  }
+  decorations.push(entry);
+}
+
+export type { EquipmentDefinition, ItemDefinition, ModelReference };

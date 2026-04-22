@@ -1,0 +1,11 @@
+{
+  "id": "svframe:broken_helmet",
+  "kind": "helmet",
+  "backingItem": "minecraft:leather_helmet",
+  "model": "svframe:broken_helmet",
+  "assetId": "svframe:emptyset",
+  "wearable": {
+    "slot": "head",
+    "equippableAssetId": "svframe:emptyset"
+  }
+}

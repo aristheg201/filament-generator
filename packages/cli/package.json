@@ -1,0 +1,23 @@
+{
+  "name": "@filament-workbench/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "filament-workbench": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "node -e \"import('node:fs/promises').then(fs=>fs.rm('dist',{recursive:true,force:true}))\"",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@filament-workbench/core": "workspace:*",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}
