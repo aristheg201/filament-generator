@@ -38,6 +38,16 @@ export function buildAssetGraph(pack: ParsedPack): AssetGraph {
     }
   }
 
+  for (const block of pack.blocks) {
+    const id = `block:${block.definition.id}`;
+    nodes.set(id, { id, type: 'block', filePath: block.filePath });
+    if (block.definition.model) {
+      const modelNodeId = `model:${block.definition.model}`;
+      addEdge(edges, id, modelNodeId);
+      addEdge(reverseEdges, modelNodeId, id);
+    }
+  }
+
   for (const equipment of pack.equipments) {
     const id = `equipment:${equipment.definition.assetId}`;
     nodes.set(id, { id, type: 'equipment', filePath: equipment.filePath });
@@ -78,7 +88,7 @@ export function buildAssetGraph(pack: ParsedPack): AssetGraph {
   }
 
   for (const [assetId, users] of assetUsers.entries()) {
-    if (users.length > 20) {
+    if (users.length > 5) {
       diagnostics.push({
         severity: 'warn',
         category: 'armor',
@@ -89,7 +99,28 @@ export function buildAssetGraph(pack: ParsedPack): AssetGraph {
     }
   }
 
+  for (const node of nodes.values()) {
+    if ((node.type === 'model' || node.type === 'equipment') && !reverseEdges.has(node.id)) {
+      diagnostics.push({
+        severity: 'warn',
+        category: node.type,
+        code: node.type === 'model' ? 'UNREACHABLE_MODEL' : 'UNUSED_EQUIPMENT_GROUP',
+        message: node.type === 'model' ? `Model '${node.id.replace(/^model:/, '')}' is unreachable` : `Equipment group '${node.id.replace(/^equipment:/, '')}' is not referenced by any item`,
+        filePath: node.filePath,
+        relatedNodes: [],
+      });
+    }
+  }
+
   return { nodes, edges, reverseEdges, diagnostics };
+}
+
+export function getDependencies(graph: AssetGraph, nodeId: string): string[] {
+  return [...(graph.edges.get(nodeId) ?? new Set<string>())].sort((a, b) => a.localeCompare(b));
+}
+
+export function getDependents(graph: AssetGraph, nodeId: string): string[] {
+  return [...(graph.reverseEdges.get(nodeId) ?? new Set<string>())].sort((a, b) => a.localeCompare(b));
 }
 
 function texturePathToNodeId(path: string): string {

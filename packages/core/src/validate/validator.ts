@@ -3,7 +3,13 @@ import type { ParsedPack, ValidateResult } from '../types.js';
 import { buildAssetGraph } from '../graph/build-graph.js';
 import { textureIdToPath } from '../utils/path.js';
 import { diagnostic } from './diagnostics.js';
-import { isSuspiciousVanillaBacking, isValidVanillaItem } from '../parse/vanilla.js';
+import {
+  isSuspiciousArmorBacking,
+  isSuspiciousBlockBacking,
+  isSuspiciousVanillaBacking,
+  isValidVanillaBlock,
+  isValidVanillaItem,
+} from '../parse/vanilla.js';
 
 export function validatePack(pack: ParsedPack): ValidateResult {
   const graph = buildAssetGraph(pack);
@@ -13,14 +19,14 @@ export function validatePack(pack: ParsedPack): ValidateResult {
   validateDuplicates(pack, diagnostics);
   validateModelAndTextures(pack, diagnostics);
   validateArmorEquipment(pack, diagnostics);
-  validateDecorations(pack, diagnostics);
+  validateBlockContent(pack, diagnostics);
   validateNamespaceMismatches(pack, diagnostics);
 
   return { graph, diagnostics };
 }
 
 function validateBackingItems(pack: ParsedPack, diagnostics: Diagnostic[]): void {
-  for (const item of [...pack.items, ...pack.decorations]) {
+  for (const item of pack.items) {
     if (!isValidVanillaItem(item.definition.backingItem)) {
       diagnostics.push(
         diagnostic(
@@ -34,7 +40,22 @@ function validateBackingItems(pack: ParsedPack, diagnostics: Diagnostic[]): void
       continue;
     }
 
-    if (isSuspiciousVanillaBacking(item.definition.backingItem)) {
+    const isArmorType = item.definition.kind === 'armor' || item.definition.kind === 'helmet' || item.definition.kind === 'hat';
+
+    if (isArmorType && isSuspiciousArmorBacking(item.definition.backingItem)) {
+      diagnostics.push(
+        diagnostic(
+          'warn',
+          'armor',
+          'SUSPICIOUS_ARMOR_BACKING',
+          `Suspicious armor backing item '${item.definition.backingItem}'`,
+          item.filePath,
+        ),
+      );
+      continue;
+    }
+
+    if (!isArmorType && isSuspiciousVanillaBacking(item.definition.backingItem)) {
       diagnostics.push(
         diagnostic(
           'warn',
@@ -49,22 +70,22 @@ function validateBackingItems(pack: ParsedPack, diagnostics: Diagnostic[]): void
 }
 
 function validateDuplicates(pack: ParsedPack, diagnostics: Diagnostic[]): void {
-  const seenItems = new Map<string, string>();
-  for (const item of pack.items) {
-    const previous = seenItems.get(item.definition.id);
+  const seenAssets = new Map<string, string>();
+  for (const entry of [...pack.items, ...pack.decorations, ...pack.blocks]) {
+    const previous = seenAssets.get(entry.definition.id);
     if (previous) {
       diagnostics.push(
         diagnostic(
           'error',
-          'item',
+          'asset',
           'DUPLICATE_LOGICAL_ASSET',
-          `Duplicate logical asset id '${item.definition.id}'`,
-          item.filePath,
-          { relatedNodes: [previous, item.filePath] },
+          `Duplicate logical asset id '${entry.definition.id}'`,
+          entry.filePath,
+          { relatedNodes: [previous, entry.filePath] },
         ),
       );
     } else {
-      seenItems.set(item.definition.id, item.filePath);
+      seenAssets.set(entry.definition.id, entry.filePath);
     }
   }
 }
@@ -79,7 +100,7 @@ function validateModelAndTextures(pack: ParsedPack, diagnostics: Diagnostic[]): 
     });
   }
 
-  for (const item of [...pack.items, ...pack.decorations]) {
+  for (const item of [...pack.items, ...pack.decorations, ...pack.blocks]) {
     if (!item.definition.model) {
       continue;
     }
@@ -96,6 +117,27 @@ function validateModelAndTextures(pack: ParsedPack, diagnostics: Diagnostic[]): 
           item.filePath,
         ),
       );
+    }
+  }
+
+  for (const equipment of pack.equipments) {
+    for (const layer of [...equipment.definition.humanoid, ...equipment.definition.humanoidLeggings]) {
+      const texturePath = textureIdToPath(layer.texture);
+      if (texturePath.startsWith('assets/minecraft/')) {
+        continue;
+      }
+      if (!pack.texturePaths.has(texturePath)) {
+        diagnostics.push(
+          diagnostic(
+            'error',
+            'equipment',
+            'MISSING_EQUIPMENT_TEXTURE',
+            `Equipment group '${equipment.definition.assetId}' points to missing texture '${layer.texture}'`,
+            equipment.filePath,
+            { relatedNodes: [texturePath] },
+          ),
+        );
+      }
     }
   }
 
@@ -164,8 +206,20 @@ function validateArmorEquipment(pack: ParsedPack, diagnostics: Diagnostic[]): vo
   for (const item of pack.items) {
     const isArmorType = item.definition.kind === 'armor' || item.definition.kind === 'helmet' || item.definition.kind === 'hat';
     const linkedAssetId = item.definition.assetId ?? item.definition.wearable?.equippableAssetId;
+    const hasInventoryModel = Boolean(item.definition.model);
 
     if (!linkedAssetId) {
+      if (isArmorType && hasInventoryModel) {
+        diagnostics.push(
+          diagnostic(
+            'error',
+            'armor',
+            'MISSING_WORN_ASSET_GROUP',
+            `Armor item '${item.definition.id}' has inventory model but no worn asset group`,
+            item.filePath,
+          ),
+        );
+      }
       continue;
     }
 
@@ -223,6 +277,18 @@ function validateArmorEquipment(pack: ParsedPack, diagnostics: Diagnostic[]): vo
         ),
       );
     }
+
+    if (!hasInventoryModel && isArmorType) {
+      diagnostics.push(
+        diagnostic(
+          'warn',
+          'armor',
+          'MISSING_INVENTORY_MODEL',
+          `Armor item '${item.definition.id}' has worn render data but no inventory model`,
+          item.filePath,
+        ),
+      );
+    }
   }
 
   for (const [assetId, count] of assetUsage.entries()) {
@@ -234,9 +300,10 @@ function validateArmorEquipment(pack: ParsedPack, diagnostics: Diagnostic[]): vo
   }
 }
 
-function validateDecorations(pack: ParsedPack, diagnostics: Diagnostic[]): void {
+function validateBlockContent(pack: ParsedPack, diagnostics: Diagnostic[]): void {
   for (const decoration of pack.decorations) {
-    if (decoration.definition.placeable === undefined) {
+    const hasPlacement = Boolean(decoration.definition.placement) || decoration.definition.placeable !== undefined;
+    if (!hasPlacement) {
       diagnostics.push(
         diagnostic(
           'warn',
@@ -248,7 +315,7 @@ function validateDecorations(pack: ParsedPack, diagnostics: Diagnostic[]): void 
       );
     }
 
-    if (decoration.definition.placeable === false && /chest|barrel/i.test(decoration.definition.id)) {
+    if ((decoration.definition.placeable === false || decoration.definition.placement?.placeable === false) && /chest|barrel/i.test(decoration.definition.id)) {
       diagnostics.push(
         diagnostic(
           'warn',
@@ -259,11 +326,86 @@ function validateDecorations(pack: ParsedPack, diagnostics: Diagnostic[]): void 
         ),
       );
     }
+
+    if (decoration.definition.backingBlock && !isValidVanillaBlock(decoration.definition.backingBlock)) {
+      diagnostics.push(
+        diagnostic(
+          'error',
+          'block',
+          'INVALID_BACKING_BLOCK',
+          `Invalid backing block '${decoration.definition.backingBlock}'`,
+          decoration.filePath,
+        ),
+      );
+    }
+  }
+
+  for (const block of pack.blocks) {
+    if (!block.definition.placement) {
+      diagnostics.push(
+        diagnostic(
+          'error',
+          'block',
+          'MISSING_PLACEMENT_METADATA',
+          `Block '${block.definition.id}' missing placement metadata`,
+          block.filePath,
+        ),
+      );
+    }
+
+    if (!block.definition.backingBlock && !block.definition.placement?.backingBlock) {
+      diagnostics.push(
+        diagnostic(
+          'error',
+          'block',
+          'MISSING_BACKING_BLOCK',
+          `Block '${block.definition.id}' is missing backing block metadata`,
+          block.filePath,
+        ),
+      );
+    }
+
+    const resolvedBackingBlock = block.definition.backingBlock ?? block.definition.placement?.backingBlock;
+    if (resolvedBackingBlock && !isValidVanillaBlock(resolvedBackingBlock)) {
+      diagnostics.push(
+        diagnostic(
+          'error',
+          'block',
+          'INVALID_BACKING_BLOCK',
+          `Invalid backing block '${resolvedBackingBlock}'`,
+          block.filePath,
+        ),
+      );
+    }
+
+    if (resolvedBackingBlock && isSuspiciousBlockBacking(resolvedBackingBlock)) {
+      diagnostics.push(
+        diagnostic(
+          'warn',
+          'block',
+          'SUSPICIOUS_BACKING_BLOCK',
+          `Suspicious backing block '${resolvedBackingBlock}'`,
+          block.filePath,
+        ),
+      );
+    }
+
+    if (block.definition.placement && block.definition.placement.placeable === false) {
+      diagnostics.push(
+        diagnostic(
+          'warn',
+          'block',
+          'ITEM_ONLY_BLOCK_CONTENT',
+          `'${block.definition.id}' is item-only and not placeable`,
+          block.filePath,
+        ),
+      );
+    }
   }
 }
 
 function validateNamespaceMismatches(pack: ParsedPack, diagnostics: Diagnostic[]): void {
-  for (const item of [...pack.items, ...pack.decorations]) {
+  for (const item of [...pack.items, ...pack.decorations, ...pack.blocks]) {
     const itemNamespace = item.definition.id.split(':')[0] ?? 'minecraft';
     if (itemNamespace !== item.namespace) {
       diagnostics.push(

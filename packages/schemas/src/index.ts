@@ -27,6 +27,22 @@ export const wearableSchema = z.object({
   equippableAssetId: z.string().optional(),
 });
 
+export const placementMetadataSchema = z.object({
+  placeable: z.boolean(),
+  backingBlock: z.string().optional(),
+  backingItem: z.string().optional(),
+  placementSound: z.string().optional(),
+  breakLootTable: z.string().optional(),
+});
+export type PlacementMetadata = z.infer<typeof placementMetadataSchema>;
+
+export const breakMetadataSchema = z.object({
+  lootTable: z.string().optional(),
+  hardness: z.number().nonnegative().optional(),
+  tool: z.string().optional(),
+});
+export type BreakMetadata = z.infer<typeof breakMetadataSchema>;
+
 export const itemDefinitionSchema = z.object({
   id: z.string().min(1),
   kind: z.enum(['item', 'armor', 'helmet', 'hat', 'decoration', 'block']),
@@ -37,6 +53,19 @@ export const itemDefinitionSchema = z.object({
   placeable: z.boolean().optional(),
 });
 export type ItemDefinition = z.infer<typeof itemDefinitionSchema>;
+
+export const blockDefinitionSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(['decoration', 'block']),
+  backingItem: z.string().optional(),
+  backingBlock: z.string().optional(),
+  model: z.string().optional(),
+  assetId: z.string().optional(),
+  placeable: z.boolean().optional(),
+  placement: placementMetadataSchema.optional(),
+  break: breakMetadataSchema.optional(),
+});
+export type BlockDefinition = z.infer<typeof blockDefinitionSchema>;
 
 export const equipmentLayerSchema = z.object({
   texture: z.string().min(1),
@@ -70,6 +99,8 @@ export const buildReportSchema = z.object({
     warnings: z.number().int().nonnegative(),
     infos: z.number().int().nonnegative(),
   }),
+  partialGeneration: z.boolean().default(false),
+  generatedFiles: z.number().int().nonnegative().default(0),
   generatedAt: z.string(),
 });
 export type BuildReport = z.infer<typeof buildReportSchema>;

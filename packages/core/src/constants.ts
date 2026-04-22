@@ -8,6 +8,7 @@ export const JSON_EXT = '.json';
 export const VANILLA_ITEMS = new Set<string>([
   'minecraft:air',
   'minecraft:stone',
+  'minecraft:paper',
   'minecraft:iron_sword',
   'minecraft:diamond_sword',
   'minecraft:netherite_sword',
@@ -18,7 +19,20 @@ export const VANILLA_ITEMS = new Set<string>([
   'minecraft:netherite_helmet',
   'minecraft:chest',
   'minecraft:barrel',
+  'minecraft:shield',
+  'minecraft:golden_helmet',
+  'minecraft:carved_pumpkin',
   'minecraft:stick',
+]);
+
+export const VANILLA_BLOCKS = new Set<string>([
+  'minecraft:stone',
+  'minecraft:oak_planks',
+  'minecraft:spruce_planks',
+  'minecraft:chest',
+  'minecraft:barrel',
+  'minecraft:iron_block',
+  'minecraft:gold_block',
 ]);
 
 export const SAFE_ITEM_BACKINGS = new Set<string>([
@@ -30,5 +44,27 @@ export const SAFE_ITEM_BACKINGS = new Set<string>([
   'minecraft:iron_helmet',
   'minecraft:diamond_helmet',
   'minecraft:netherite_helmet',
+  'minecraft:golden_helmet',
+  'minecraft:carved_pumpkin',
   'minecraft:stick',
+]);
+
+export const SAFE_ARMOR_BACKINGS = new Set<string>([
+  'minecraft:leather_helmet',
+  'minecraft:chainmail_helmet',
+  'minecraft:iron_helmet',
+  'minecraft:diamond_helmet',
+  'minecraft:netherite_helmet',
+  'minecraft:golden_helmet',
+  'minecraft:carved_pumpkin',
+]);
+
+export const SAFE_BLOCK_BACKINGS = new Set<string>([
+  'minecraft:stone',
+  'minecraft:oak_planks',
+  'minecraft:spruce_planks',
+  'minecraft:chest',
+  'minecraft:barrel',
+  'minecraft:iron_block',
+  'minecraft:gold_block',
 ]);

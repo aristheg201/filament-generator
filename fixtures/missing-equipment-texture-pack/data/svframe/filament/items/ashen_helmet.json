@@ -1,0 +1,11 @@
+{
+  "id": "svframe:ashen_helmet",
+  "kind": "helmet",
+  "backingItem": "minecraft:iron_helmet",
+  "model": "svframe:ashen_helmet",
+  "assetId": "svframe:ashenset",
+  "wearable": {
+    "slot": "head",
+    "equippableAssetId": "svframe:ashenset"
+  }
+}

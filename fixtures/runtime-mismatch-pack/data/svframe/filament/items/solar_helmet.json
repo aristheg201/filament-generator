@@ -1,0 +1,6 @@
+{
+  "id": "svframe:solar_helmet",
+  "kind": "helmet",
+  "backingItem": "minecraft:iron_helmet",
+  "model": "svframe:solar_helmet"
+}

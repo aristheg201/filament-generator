@@ -3,6 +3,7 @@ import { normalizeRelativePath } from '../utils/path.js';
 
 const ITEM_RE = /^data\/([^/]+)\/filament\/items\/(.+)\.json$/;
 const DECORATION_RE = /^data\/([^/]+)\/filament\/decorations\/(.+)\.json$/;
+const BLOCK_RE = /^data\/([^/]+)\/filament\/blocks\/(.+)\.json$/;
 const EQUIPMENT_RE = /^assets\/([^/]+)\/equipment\/(.+)\.json$/;
 const MODEL_RE = /^assets\/([^/]+)\/models\/(.+)\.json$/;
 const TEXTURE_RE = /^assets\/([^/]+)\/textures\/(.+)\.png$/;
@@ -18,6 +19,11 @@ export function classifyFile(file: SourceFile): ClassifiedFile {
   const decoration = normalizedPath.match(DECORATION_RE);
   if (decoration) {
     return withRole(file, 'filament-decoration', decoration[1], decoration[2]);
+  }
+
+  const block = normalizedPath.match(BLOCK_RE);
+  if (block) {
+    return withRole(file, 'filament-block', block[1], block[2]);
   }
 
   const equipment = normalizedPath.match(EQUIPMENT_RE);

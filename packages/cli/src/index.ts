@@ -11,6 +11,7 @@ import {
   hasErrorSeverity,
   hasWarnSeverity,
   parsePack,
+  runtimeCheckPack,
   summarizeDiagnostics,
   validatePack,
 } from '@filament-workbench/core';
@@ -42,6 +43,7 @@ program
         files: pack.files.length,
         items: pack.items.length,
         decorations: pack.decorations.length,
+        blocks: pack.blocks.length,
         equipments: pack.equipments.length,
         models: pack.models.length,
       },
@@ -52,7 +54,7 @@ program
     } else {
       process.stdout.write(`Imported ${pack.files.length} files from ${inputPath}\n`);
       process.stdout.write(`Namespaces: ${pack.namespaces.join(', ') || '(none)'}\n`);
-      process.stdout.write(`Items: ${pack.items.length}, Decorations: ${pack.decorations.length}, Equipment: ${pack.equipments.length}, Models: ${pack.models.length}\n`);
+      process.stdout.write(`Items: ${pack.items.length}, Decorations: ${pack.decorations.length}, Blocks: ${pack.blocks.length}, Equipment: ${pack.equipments.length}, Models: ${pack.models.length}\n`);
     }
   });
 
@@ -91,10 +93,11 @@ program
   .command('generate')
   .argument('<input>')
   .requiredOption('--out <dir>', 'Output directory')
+  .option('--allow-partial', 'Allow normalized partial generation when validation errors exist')
   .option('--strict', 'Warnings fail build')
   .option('--json', 'Machine-readable output')
-  .action(async (inputPath: string, options: { out: string } & CommonOptions) => {
-    const generated = await generatePack(inputPath, options.out);
+  .action(async (inputPath: string, options: { out: string; allowPartial?: boolean } & CommonOptions) => {
+    const generated = await generatePack(inputPath, options.out, { allowPartial: options.allowPartial });
     if (options.json) {
       process.stdout.write(JSON.stringify(generated.report, null, 2));
       process.stdout.write('\n');
@@ -104,6 +107,24 @@ program
     }
 
     const shouldFail = hasErrorSeverity(generated.diagnostics) || (options.strict && hasWarnSeverity(generated.diagnostics));
+    process.exit(shouldFail ? 1 : 0);
+  });
+
+program
+  .command('runtime-check')
+  .argument('<path>')
+  .option('--strict', 'Warnings fail build')
+  .option('--json', 'Machine-readable output')
+  .action(async (inputPath: string, options: CommonOptions) => {
+    const pack = await parsePack(inputPath);
+    const result = runtimeCheckPack(pack);
+    if (options.json) {
+      process.stdout.write(diagnosticsToJson(result.diagnostics));
+    } else {
+      process.stdout.write(`${diagnosticsToText(result.diagnostics)}\n`);
+    }
+
+    const shouldFail = hasErrorSeverity(result.diagnostics) || (options.strict && hasWarnSeverity(result.diagnostics));
     process.exit(shouldFail ? 1 : 0);
   });
 

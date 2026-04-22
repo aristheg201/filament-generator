@@ -18,4 +18,28 @@ describe('generator', () => {
 
     await fs.rm(out, { recursive: true, force: true });
   });
+
+  it('rebuilds canonical block output from parsed entities', async () => {
+    const out = path.resolve('.tmp/generated-block');
+    await fs.rm(out, { recursive: true, force: true });
+    await generatePack(fixture('valid-block-pack'), out);
+
+    const generatedBlock = await fs.readFile(path.join(out, 'data/svframe/filament/blocks/ancient_pillar.json'), 'utf8');
+    expect(generatedBlock).toContain('"placement"');
+    expect(generatedBlock).toContain('"backingBlock": "minecraft:stone"');
+
+    await fs.rm(out, { recursive: true, force: true });
+  });
+
+  it('requires explicit allow-partial for invalid generation', async () => {
+    const out = path.resolve('.tmp/generated-invalid');
+    await fs.rm(out, { recursive: true, force: true });
+
+    await expect(generatePack(fixture('invalid-block-pack'), out)).rejects.toThrow(/allow-partial/);
+
+    const partial = await generatePack(fixture('invalid-block-pack'), out, { allowPartial: true });
+    expect(partial.report.partialGeneration).toBe(true);
+
+    await fs.rm(out, { recursive: true, force: true });
+  });
 });

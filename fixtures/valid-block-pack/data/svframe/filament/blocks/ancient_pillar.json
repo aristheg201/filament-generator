@@ -1,0 +1,17 @@
+{
+  "id": "svframe:ancient_pillar",
+  "kind": "block",
+  "backingBlock": "minecraft:stone",
+  "backingItem": "minecraft:stone",
+  "model": "svframe:ancient_pillar",
+  "placement": {
+    "placeable": true,
+    "backingBlock": "minecraft:stone",
+    "backingItem": "minecraft:stone",
+    "breakLootTable": "svframe:blocks/ancient_pillar"
+  },
+  "break": {
+    "lootTable": "svframe:blocks/ancient_pillar",
+    "hardness": 2
+  }
+}

@@ -1,8 +1,9 @@
-import type { Diagnostic, EquipmentDefinition, ItemDefinition, ModelReference } from '@filament-workbench/schemas';
+import type { BlockDefinition, Diagnostic, EquipmentDefinition, ItemDefinition, ModelReference } from '@filament-workbench/schemas';
 
 export type FileRole =
   | 'filament-item'
   | 'filament-decoration'
+  | 'filament-block'
   | 'equipment'
   | 'model'
   | 'texture'
@@ -37,11 +38,18 @@ export interface ParsedEquipment {
   namespace: string;
 }
 
+export interface ParsedBlock {
+  definition: BlockDefinition;
+  filePath: string;
+  namespace: string;
+}
+
 export interface ParsedModel {
   id: string;
   definition: ModelReference;
   filePath: string;
   namespace: string;
+  logicalPath: string;
 }
 
 export interface ParsedPack {
@@ -49,14 +57,15 @@ export interface ParsedPack {
   files: ParsedFile[];
   namespaces: string[];
   items: ParsedItem[];
-  decorations: ParsedItem[];
+  decorations: ParsedBlock[];
+  blocks: ParsedBlock[];
   equipments: ParsedEquipment[];
   models: ParsedModel[];
   texturePaths: Set<string>;
   parseDiagnostics: Diagnostic[];
 }
 
-export type AssetNodeType = 'item' | 'decoration' | 'equipment' | 'model' | 'texture';
+export type AssetNodeType = 'item' | 'decoration' | 'block' | 'equipment' | 'model' | 'texture';
 
 export interface AssetNode {
   id: string;

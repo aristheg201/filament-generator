@@ -23,4 +23,23 @@ describe('validator', () => {
     const result = validatePack(pack);
     expect(result.diagnostics.some((d) => d.code === 'ITEM_ONLY_BLOCK_CONTENT')).toBe(true);
   });
+
+  it('detects invalid block content and missing placement metadata', async () => {
+    const pack = await parsePack(fixture('invalid-block-pack'));
+    const result = validatePack(pack);
+    expect(result.diagnostics.some((d) => d.code === 'MISSING_PLACEMENT_METADATA')).toBe(true);
+    expect(result.diagnostics.some((d) => d.code === 'INVALID_BACKING_BLOCK')).toBe(true);
+  });
+
+  it('detects missing equipment texture targets', async () => {
+    const pack = await parsePack(fixture('missing-equipment-texture-pack'));
+    const result = validatePack(pack);
+    expect(result.diagnostics.some((d) => d.code === 'MISSING_EQUIPMENT_TEXTURE')).toBe(true);
+  });
+
+  it('detects inventory model present but worn group missing', async () => {
+    const pack = await parsePack(fixture('runtime-mismatch-pack'));
+    const result = validatePack(pack);
+    expect(result.diagnostics.some((d) => d.code === 'MISSING_WORN_ASSET_GROUP')).toBe(true);
+  });
 });

@@ -1,0 +1,6 @@
+{
+  "id": "svframe:broken_pillar",
+  "kind": "block",
+  "backingBlock": "minecraft:not_a_block",
+  "model": "svframe:broken_pillar"
+}

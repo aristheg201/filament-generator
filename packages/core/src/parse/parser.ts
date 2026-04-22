@@ -1,7 +1,7 @@
-import type { Diagnostic, EquipmentDefinition, ItemDefinition, ModelReference } from '@filament-workbench/schemas';
-import { equipmentDefinitionSchema, itemDefinitionSchema, modelReferenceSchema } from '@filament-workbench/schemas';
+import type { BlockDefinition, Diagnostic, EquipmentDefinition, ItemDefinition, ModelReference } from '@filament-workbench/schemas';
+import { blockDefinitionSchema, equipmentDefinitionSchema, itemDefinitionSchema, modelReferenceSchema } from '@filament-workbench/schemas';
 import { loadFileSource } from '../fs/source-loader.js';
-import type { ParsedEquipment, ParsedItem, ParsedModel, ParsedPack, ParsedFile } from '../types.js';
+import type { ParsedBlock, ParsedEquipment, ParsedItem, ParsedModel, ParsedPack, ParsedFile } from '../types.js';
 import { classifyFile } from './classify.js';
 import { parseJsonFile } from './json.js';
 import { detectNamespaces } from './namespace.js';
@@ -16,7 +16,8 @@ export async function parsePack(inputPath: string): Promise<ParsedPack> {
   const parseDiagnostics: Diagnostic[] = [];
   const parsedFiles: ParsedFile[] = [];
   const items: ParsedItem[] = [];
-  const decorations: ParsedItem[] = [];
+  const decorations: ParsedBlock[] = [];
+  const blocks: ParsedBlock[] = [];
   const equipments: ParsedEquipment[] = [];
   const models: ParsedModel[] = [];
   const texturePaths = new Set<string>();
@@ -47,7 +48,7 @@ export async function parsePack(inputPath: string): Promise<ParsedPack> {
         continue;
       }
 
-      if (parsed.role === 'filament-item' || parsed.role === 'filament-decoration') {
+      if (parsed.role === 'filament-item') {
         const result = itemDefinitionSchema.safeParse(parsed.jsonValue);
         if (!result.success) {
           parseDiagnostics.push(
@@ -62,7 +63,29 @@ export async function parsePack(inputPath: string): Promise<ParsedPack> {
           continue;
         }
 
-        pushItem(parsed.role, result.data, parsed.path, parsed.namespace, items, decorations);
+        items.push({
+          definition: result.data,
+          filePath: parsed.path,
+          namespace: parsed.namespace ?? 'minecraft',
+        });
+      }
+
+      if (parsed.role === 'filament-decoration' || parsed.role === 'filament-block') {
+        const result = blockDefinitionSchema.safeParse(parsed.jsonValue);
+        if (!result.success) {
+          parseDiagnostics.push(
+            diagnostic(
+              'error',
+              'schema',
+              'BLOCK_SCHEMA_INVALID',
+              `Invalid block definition in ${parsed.path}: ${result.error.issues[0]?.message ?? 'unknown'}`,
+              parsed.path,
+            ),
+          );
+          continue;
+        }
+
+        pushBlock(parsed.role, result.data, parsed.path, parsed.namespace, decorations, blocks);
       }
 
       if (parsed.role === 'equipment') {
@@ -107,6 +130,7 @@ export async function parsePack(inputPath: string): Promise<ParsedPack> {
           definition: result.data,
           filePath: parsed.path,
           namespace: parsed.namespace ?? 'minecraft',
+          logicalPath: parsed.logicalPath ?? 'item/unknown',
         });
       }
       continue;
@@ -121,6 +145,7 @@ export async function parsePack(inputPath: string): Promise<ParsedPack> {
     namespaces,
     items,
     decorations,
+    blocks,
     equipments,
     models,
     texturePaths,
@@ -133,25 +158,25 @@ function toModelId(namespace: string, logicalPath: string): string {
   return `${namespace}:${clean}`;
 }
 
-function pushItem(
-  role: 'filament-item' | 'filament-decoration',
-  definition: ItemDefinition,
+function pushBlock(
+  role: 'filament-decoration' | 'filament-block',
+  definition: BlockDefinition,
   filePath: string,
   namespace: string | undefined,
-  items: ParsedItem[],
-  decorations: ParsedItem[],
+  decorations: ParsedBlock[],
+  blocks: ParsedBlock[],
 ): void {
-  const entry: ParsedItem = {
+  const entry: ParsedBlock = {
     definition,
     filePath,
     namespace: namespace ?? 'minecraft',
   };
 
-  if (role === 'filament-item') {
-    items.push(entry);
+  if (role === 'filament-decoration') {
+    decorations.push(entry);
     return;
   }
-  decorations.push(entry);
+  blocks.push(entry);
 }
 
-export type { EquipmentDefinition, ItemDefinition, ModelReference };
+export type { BlockDefinition, EquipmentDefinition, ItemDefinition, ModelReference };

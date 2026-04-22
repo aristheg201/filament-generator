@@ -1,0 +1,13 @@
+{
+  "assetId": "svframe:ashenset",
+  "humanoid": [
+    {
+      "texture": "svframe:entity/equipment/humanoid/ashenset"
+    }
+  ],
+  "humanoidLeggings": [
+    {
+      "texture": "svframe:entity/equipment/humanoid/ashenset_leggings"
+    }
+  ]
+}

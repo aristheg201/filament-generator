@@ -12,4 +12,10 @@ describe('parser', () => {
     expect(pack.models.length).toBe(1);
     expect(pack.namespaces).toContain('svframe');
   });
+
+  it('parses valid block fixture', async () => {
+    const pack = await parsePack(fixture('valid-block-pack'));
+    expect(pack.blocks.length).toBe(1);
+    expect(pack.blocks[0]?.definition.kind).toBe('block');
+  });
 });

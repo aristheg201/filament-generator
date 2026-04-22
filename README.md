@@ -12,16 +12,17 @@ Filament Workbench is a production-focused, version-locked tooling engine for Mi
 
 This repository is not a generic resource-pack helper and is intentionally not version-agnostic in v0.1.
 
-## What phase 1 implements
+## Current implemented scope
 
 - Import from directory and zip packs
 - Parse Filament structures under data/<namespace>/filament/
 - Parse resource-like structures under assets/<namespace>/
-- Build an internal asset graph for item, armor, model, texture, equipment, decoration relations
-- Deep validation with structured diagnostics
+- Explicit support for items, armor/helmets/hats, decorations, and basic blocks
+- Build an internal asset graph for item, armor, block, model, texture, equipment, and decoration relations
+- Lint validation plus runtime-like validation for resource lookup and worn/inventory mismatches
 - Safe deterministic fixer for BOM and JSON normalization
-- Deterministic generator output with reports
-- CLI commands for import/lint/analyze/generate/doctor/report/fix
+- Deterministic normalized generator rebuilt from parsed entities
+- CLI commands for import/lint/analyze/generate/doctor/report/fix/runtime-check
 
 ## Repository layout
 
@@ -42,6 +43,7 @@ This repository is not a generic resource-pack helper and is intentionally not v
 - filament-workbench doctor <path> [--json]
 - filament-workbench report <path> --format json|text
 - filament-workbench fix <path> [--dry-run]
+- filament-workbench runtime-check <path> [--strict] [--json]
 
 Examples:
 
@@ -69,11 +71,33 @@ Safe in-place fixes:
 
 Unsafe/speculative fixes are not auto-applied in v0.1.
 
+## Generator behavior
+
+The generator now rebuilds normalized output from parsed entities instead of copying input files wholesale.
+
+- canonicalized item, decoration, block, equipment, and model JSON output
+- deterministic write ordering
+- report and diagnostics artifacts
+- partial generation only when explicitly requested with allow-partial behavior in the CLI/core
+
+It still does not invent missing textures, synthesize real Filament runtime assets, or emulate Minecraft internals beyond validator/runtime-check heuristics.
+
+## Runtime-check mode
+
+runtime-check is an emulated second validation pass intended to catch failures likely to break a real server/resource pipeline:
+
+- armor inventory/worn mismatches
+- equipment groups with render texture lookup failures
+- block placement metadata likely to fail at runtime
+- non-canonical resource paths likely to break lookups
+
 ## Known limitations
 
-- Built-in vanilla models are recognized by prefix rules, but complete vanilla asset index validation is out of scope
+- Built-in vanilla models are recognized by prefix rules, but complete vanilla asset index validation is still out of scope
+- Vanilla item/block validation is stronger than before but still heuristic and intentionally not a full Mojang registry mirror
 - Source location currently reports file-level diagnostics, not full line/column mapping
-- Decoration/block placement metadata checks are conservative and intentionally strict
+- Runtime-check is an emulated validation pass, not a real Minecraft or Filament bootstrap
+- No web UI, in-game preview, hotbar preview, or worn model rendering preview in this phase
 
 ## Dev workflow
 
